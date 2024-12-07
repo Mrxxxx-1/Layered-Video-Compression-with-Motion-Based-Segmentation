@@ -1,80 +1,83 @@
 import numpy as np
-import struct
-from scipy.fftpack import idct
-import imageio
+import cv2
 
-# Constants
-BLOCK_SIZE = 8
-MACROBLOCK_SIZE = 16
-FRAME_WIDTH = 512   # Adjust according to input
-FRAME_HEIGHT = 512  # Adjust according to input
-
-def read_compressed_file(file_path):
-    with open(file_path, 'rb') as f:
-        # Read quantization steps
-        n1, n2 = struct.unpack('ii', f.read(8))
-        compressed_data = f.read()  # Read the rest of the data
-    return n1, n2, compressed_data
-
-def idct2(block):
-    return idct(idct(block.T, norm='ortho').T, norm='ortho')
-
-def dequantize_block(block, q_step):
-    return block * (2 ** q_step)
-
-def process_macroblock(block_data, quantization_step):
-    blocks = []
-    offset = 0
-    for _ in range((MACROBLOCK_SIZE // BLOCK_SIZE) ** 2):
-        block = np.frombuffer(block_data[offset:offset + BLOCK_SIZE * BLOCK_SIZE * 2], dtype=np.int16).reshape((BLOCK_SIZE, BLOCK_SIZE))
-        dequantized_block = dequantize_block(block, quantization_step)
-        idct_block = idct2(dequantized_block)
-        blocks.append(idct_block)
-        offset += BLOCK_SIZE * BLOCK_SIZE * 2
-    return blocks
-
-def reconstruct_frame(compressed_data, n1, n2, frame_count):
-    offset = 0
-    frames = []
-
-    for _ in range(frame_count):
-        frame = np.zeros((FRAME_HEIGHT, FRAME_WIDTH, 3), dtype=np.uint8)
-
-        for i in range(0, FRAME_HEIGHT, MACROBLOCK_SIZE):
-            for j in range(0, FRAME_WIDTH, MACROBLOCK_SIZE):
-                for c in range(3):  # For each color channel
-                    block_type = struct.unpack('B', compressed_data[offset:offset + 1])[0]
-                    offset += 1
-                    
-                    quant_step = n1 if block_type == 1 else n2
-                    block_data = compressed_data[offset:offset + ((MACROBLOCK_SIZE // BLOCK_SIZE) ** 2) * (BLOCK_SIZE ** 2 * 2)]
-                    offset += ((MACROBLOCK_SIZE // BLOCK_SIZE) ** 2) * (BLOCK_SIZE ** 2 * 2)
-                    
-                    blocks = process_macroblock(block_data, quant_step)
-                    
-                    # Reconstruct macroblock
-                    mb = np.zeros((MACROBLOCK_SIZE, MACROBLOCK_SIZE))
-                    idx = 0
-                    for bi in range(0, MACROBLOCK_SIZE, BLOCK_SIZE):
-                        for bj in range(0, MACROBLOCK_SIZE, BLOCK_SIZE):
-                            mb[bi:bi+BLOCK_SIZE, bj:bj+BLOCK_SIZE] = blocks[idx]
-                            idx += 1
-                    frame[i:i+MACROBLOCK_SIZE, j:j+MACROBLOCK_SIZE, c] = np.clip(mb, 0, 255)
-
-        frames.append(frame)
-    return frames
-
-def save_video(frames, output_file):
-    # imageio.mimsave(output_file, frames, fps=30)
-    imageio.mimsave(output_file, frames)
-
-
-if __name__ == "__main__":
-    input_file = "output_video.cmp"  # Compressed file path
-    output_file = "output_video.mp4"  # Output video file
-    num_frames = 30  # Adjust based on your input video
+def read_compressed_file(input_file):
+    """
+    Reads the compressed file and extracts quantization values and compressed frames.
+    """
+    with open(input_file, 'r') as f:
+        lines = f.readlines()
     
-    n1, n2, compressed_data = read_compressed_file(input_file)
-    frames = reconstruct_frame(compressed_data, n1, n2, num_frames)
-    save_video(frames, output_file)
-    print(f"Decoded video saved as {output_file}")
+    # The first line contains the quantization levels for foreground and background
+    quant_fg, quant_bg = map(int, lines[0].split())
+    
+    # Each subsequent line represents a block: block_type followed by coefficients
+    blocks = []
+    for line in lines[1:]:
+        parts = line.split()
+        block_type = int(parts[0])
+        coeffs = np.array(list(map(int, parts[1:])))
+        blocks.append((block_type, coeffs))
+    
+    return quant_fg, quant_bg, blocks
+
+def reconstruct_frame(blocks, frame_height, frame_width, quant_fg, quant_bg, block_size=8):
+    """
+    Reconstructs a single frame from blocks using IDCT and dequantization.
+    """
+    # Create an empty frame
+    frame = np.zeros((frame_height, frame_width, 3), dtype=np.uint8)
+    
+    # Define quantization tables based on quantization levels
+    quant_table_fg = np.full((block_size, block_size), 2**quant_fg, dtype=np.float32)
+    quant_table_bg = np.full((block_size, block_size), 2**quant_bg, dtype=np.float32)
+    
+    block_idx = 0
+    for i in range(0, frame_height, block_size):
+        for j in range(0, frame_width, block_size):
+            if block_idx >= len(blocks):
+                break
+            
+            block_type, coeffs = blocks[block_idx]
+            quant_table = quant_table_fg if block_type == 1 else quant_table_bg
+
+            # Reshape the coefficients into 3 channels of 8x8 blocks
+            dct_coeffs = coeffs.reshape((3, block_size, block_size))
+            for c in range(3):
+                # Dequantize and perform inverse DCT
+                dequantized = dct_coeffs[c] * quant_table
+                idct_block = cv2.idct(dequantized.astype(np.float32))
+                idct_block = np.clip(idct_block, 0, 255).astype(np.uint8)
+                frame[i:i + block_size, j:j + block_size, c] = idct_block
+            
+            block_idx += 1
+    
+    return frame
+
+def main(input_file, frame_width, frame_height, frame_rate=30):
+    block_size = 8
+    quant_fg, quant_bg, blocks = read_compressed_file(input_file)
+    
+    # Calculate the number of blocks per frame
+    blocks_per_frame = (frame_height // block_size) * (frame_width // block_size)
+    
+    # Group blocks by frame
+    frames = [blocks[i:i + blocks_per_frame] for i in range(0, len(blocks), blocks_per_frame)]
+    
+    for idx, frame_blocks in enumerate(frames):
+        frame = reconstruct_frame(frame_blocks, frame_height, frame_width, quant_fg, quant_bg, block_size)
+        
+        # Fix color if necessary (e.g., RGB to BGR)
+        frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        
+        # Display the frame
+        cv2.imshow("Decoded Video", frame_bgr)
+        
+        # Exit on 'q'
+        if cv2.waitKey(int(1000 / frame_rate)) & 0xFF == ord('q'):
+            break
+    
+    cv2.destroyAllWindows()
+
+# Example usage
+main('output_video.cmp', frame_width=960, frame_height=540, frame_rate=30)
