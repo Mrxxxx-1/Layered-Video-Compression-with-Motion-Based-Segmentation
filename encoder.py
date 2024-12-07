@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.fftpack import dct
+# from scipy.fftpack import dct
 import cv2
 
 def read_video(filename, width, height):
@@ -10,7 +10,7 @@ def read_video(filename, width, height):
     frames = [np.frombuffer(data[i * frame_size:(i + 1) * frame_size], dtype=np.uint8).reshape((height, width, 3)) for i in range(num_frames)]
     return frames
 
-def compute_motion_vectors(curr_frame, prev_frame, block_size=16, search_range=8):
+def compute_motion_vectors(curr_frame, prev_frame, block_size=16, search_range=4):
     h, w = curr_frame.shape
     motion_vectors = np.zeros((h // block_size, w // block_size, 2), dtype=np.int32)
     for i in range(0, h - block_size + 1, block_size):
@@ -80,7 +80,7 @@ def main(input_file, output_file, width, height, quant_fg, quant_bg):
                 frame[:, :, 0], prev_frame[:, :, 0], block_size=block_size
             )
             # Use dimensions of the motion vector grid for segmentation
-            num_blocks_h, num_blocks_w = motion_vectors.shape[:2]
+            # num_blocks_h, num_blocks_w = motion_vectors.shape[:2]
             background, foreground = segment_blocks(motion_vectors)
 
             # Adjust segmentation arrays to padded frame dimensions
@@ -94,8 +94,8 @@ def main(input_file, output_file, width, height, quant_fg, quant_bg):
                 frame, block_size=8, quant_fg=quant_fg, quant_bg=quant_bg, foreground=foreground
             )
             compressed_frames.append(compressed_frame)
-            print("Foreground shape:", foreground.shape)
-            print("Padded frame shape:", frame.shape)
+            # print("Foreground shape:", foreground.shape)
+            # print("Padded frame shape:", frame.shape)
             # print(compressed_frame)
             n = n + 1
             print(n)
