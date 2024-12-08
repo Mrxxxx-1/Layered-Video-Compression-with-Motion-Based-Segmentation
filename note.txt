@@ -1,0 +1,22 @@
+Please use the .rgb files and the .wav. The rgb files are 1/2 HD - 960x540. The mp4 files are given for your reference.
+
+The videos need to play at 30 fps and the audio wav files need to play at 44.1 KHz
+
+The length of each video varies, so while reading in the .rgb files you will need to have appropriate logic - read in frame by frame till all file is read.
+
+- Parag
+
+Per the project description both are to be used to quantize the DCT coeffs by 2^n where n is n1 for foreground and n2 for background. n1 will be < n2. n1 can take on values of 0 (no quantization), 1, 2 .. and n2 will take on values ranging higher than 4. That way you can quantize the background more than the foreground.
+
+- Parag
+
+Hi Class, 
+
+There are two additional videos uploaded under the videos/additional videos for your usage in the project. Please use the .rgb files and the .wav. The rgb files are 960x540. The mp4 files are given for your reference. The videos need to play at 30 fps and the audio wav files need to play at 44.1 KHz.
+
+If you cannot access the new videos, please respond to this post or contact the TAs via email, and we’ll help you promptly.
+
+Ps. The additional videos are updated to correct audio Hz and fps, including mp4, rgb and wav files.
+
+Thanks,
+TAs
