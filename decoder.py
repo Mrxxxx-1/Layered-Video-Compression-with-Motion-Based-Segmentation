@@ -66,10 +66,11 @@ def main(input_file, frame_width, frame_height, frame_rate=30):
     
     for idx, frame_blocks in enumerate(frames):
         frame = reconstruct_frame(frame_blocks, frame_height, frame_width, quant_fg, quant_bg, block_size)
-        
+        frame_cropped = frame[:540, :960]
         # Fix color if necessary (e.g., RGB to BGR)
-        frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-        
+        frame_bgr = cv2.cvtColor(frame_cropped, cv2.COLOR_RGB2BGR)
+
+
         # Display the frame
         cv2.imshow("Decoded Video", frame_bgr)
         
@@ -80,4 +81,4 @@ def main(input_file, frame_width, frame_height, frame_rate=30):
     cv2.destroyAllWindows()
 
 # Example usage
-main('output_video.cmp', frame_width=960, frame_height=540, frame_rate=30)
+main('output_video.cmp', frame_width=960, frame_height=544, frame_rate=30)
