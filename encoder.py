@@ -79,7 +79,7 @@ def compute_motion_vectors(curr_frame_r, prev_frame_r, search_range=16, block_si
 
 def segment_blocks(motion_vectors, threshold=8):
     magnitudes = np.linalg.norm(motion_vectors, axis=2)
-    print(magnitudes)
+    # print(magnitudes)
     background = magnitudes < threshold
     foreground = ~background
     return background, foreground
