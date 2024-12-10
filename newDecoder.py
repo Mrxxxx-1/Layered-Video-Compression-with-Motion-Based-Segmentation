@@ -67,7 +67,7 @@ def reconstruct_frame(
 
 def main():
     if len(sys.argv) != 3:
-        print("Usage: mydecoder.exe input_video.cmp input_audio.wav")
+        print("Usage: newdecoder.py input_video.cmp input_audio.wav")
         sys.exit(1)
 
     output_cmp_file = sys.argv[1]
