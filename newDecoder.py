@@ -65,9 +65,19 @@ def reconstruct_frame(
     return frame
 
 
-def main(input_file, output_file, frame_width, frame_height):
+def main():
+    if len(sys.argv) != 3:
+        print("Usage: mydecoder.exe input_video.cmp input_audio.wav")
+        sys.exit(1)
+
+    output_cmp_file = sys.argv[1]
+    audio_file = sys.argv[2]
+    output_rgb_file = "output_rgb_file.rgb"
+
+    frame_width, frame_height = 960, 544
+
     block_size = 8
-    quant_fg, quant_bg, blocks = read_compressed_file(input_file)
+    quant_fg, quant_bg, blocks = read_compressed_file(output_cmp_file)
 
     # Calculate the number of blocks per frame
     blocks_per_frame = ((frame_height + block_size - 1) // block_size) * (
@@ -80,7 +90,7 @@ def main(input_file, output_file, frame_width, frame_height):
         for i in range(0, len(blocks), blocks_per_frame)
     ]
 
-    with open(output_file, "wb") as f:
+    with open(output_rgb_file, "wb") as f:
         for frame_idx, frame_blocks in enumerate(frames):
             print(f"Decoding frame {frame_idx + 1}/{len(frames)}...")
             frame = reconstruct_frame(
@@ -91,18 +101,25 @@ def main(input_file, output_file, frame_width, frame_height):
             # Write raw RGB data to the file
             f.write(frame_cropped.tobytes())
 
-
-if __name__ == "__main__":
-    output_cmp_file = "./output_video_sb_sr16.cmp"
-    input_video_file = "./demo/rgbs/WalkingStaticBackground.rgb"
-    output_video_file = "./output_video_sb_sr16.rgb"
-    audio_file = "./demo/wavs/WalkingStaticBackground.wav"
-
-    # Run decoder
-    main(output_cmp_file, output_video_file, frame_width=960, frame_height=544)
-
     # Run Comparison Player UI
     app = QApplication(sys.argv)
-    player = AVPlayer(input_video_file, output_video_file, audio_file)
+    player = AVPlayer(vfile2=output_rgb_file, afile=audio_file)
     player.show()
     sys.exit(app.exec_())
+
+
+if __name__ == "__main__":
+    main()
+    # output_cmp_file = "./output_video_sb_sr16.cmp"
+    # input_video_file = "./demo/rgbs/WalkingStaticBackground.rgb"
+    # output_video_file = "./output_video_sb_sr16.rgb"
+    # audio_file = "./demo/wavs/WalkingStaticBackground.wav"
+
+    # # Run decoder
+    # main(output_cmp_file, output_video_file, frame_width=960, frame_height=544)
+
+    # # Run Comparison Player UI
+    # app = QApplication(sys.argv)
+    # player = AVPlayer(vfile2=output_video_file, afile=audio_file)
+    # player.show()
+    # sys.exit(app.exec_())

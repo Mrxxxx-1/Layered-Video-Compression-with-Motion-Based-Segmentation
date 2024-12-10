@@ -60,10 +60,10 @@ class AVPlayer(QMainWindow):
 
     def init_ui(self):
         # File selection boxes for first video
-        self.video_label_1 = QLabel("Video File 1 (.rgb):")
+        self.video_label_1 = QLabel("Please select Input Video (.rgb):")
         self.video_path_1 = QLineEdit(self)
         self.video_path_1.setReadOnly(True)
-        self.video_button_1 = QPushButton("Select Video 1")
+        self.video_button_1 = QPushButton("Select Input Video (.rgb)")
         self.video_button_1.clicked.connect(lambda: self.select_video_file(1))
 
         # Resolution input for first video
@@ -72,10 +72,10 @@ class AVPlayer(QMainWindow):
         self.resolution_input_1.setPlaceholderText("e.g., 960x540")
 
         # File selection boxes for second video
-        self.video_label_2 = QLabel("Video File 2 (.rgb):")
+        self.video_label_2 = QLabel("Decoded Video (.rgb):")
         self.video_path_2 = QLineEdit(self)
         self.video_path_2.setReadOnly(True)
-        self.video_button_2 = QPushButton("Select Video 2")
+        self.video_button_2 = QPushButton("Select Decoded Video (.rgb)")
         self.video_button_2.clicked.connect(lambda: self.select_video_file(2))
 
         # Resolution input for second video
